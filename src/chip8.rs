@@ -1,3 +1,7 @@
+extern crate minifb;
+mod cpu;
+use minifb::{Key, Window}
+
 pub struct CHIP8 {
 
 }
@@ -16,6 +20,11 @@ impl CHIP8 {
         .unwrap_or_else(|e| {
             panic!("{}", e);
         });
+
+
+        let mut cpu = cpu::CPU::new();
+
+
     
         // Limit to max ~60 fps update rate
         window.limit_update_rate(Some(std::time::Duration::from_micros(16600)));
