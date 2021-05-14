@@ -26,7 +26,7 @@ fn main() {
     window.limit_update_rate(Some(std::time::Duration::from_micros(16600)));
 
     let mut cpu = CPU::new();
-    cpu.load_rom("test_opcode.ch8");
+    cpu.load_rom("tetris.ch8");
 
     while window.is_open() && !window.is_key_down(Key::Escape) {
         //execute cpu cycles

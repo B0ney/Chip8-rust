@@ -32,8 +32,8 @@ pub struct CPU {
     pub pc:     usize,            // program counter
     pub opcode: u16,
     pub v:      [u8; 16],       // V registers
-    pub stack:  [u16; 16],
-    pub i:      u16,            // index register
+    pub stack:  [usize; 16],
+    pub i:      usize,            // index register
     pub sp:     usize,             // stack pointer
     
     pub dt:     u8,             // delay timer
@@ -50,7 +50,7 @@ impl CPU {
             opcode:     0,
             v:          [0u8; 16],
             stack:      [0; 16],
-            i:          STARTADDR, 
+            i:          STARTADDR as usize, 
             sp:         0, 
             dt:         0,             
         };
@@ -79,6 +79,7 @@ impl CPU {
                 break;
             }
         }
+        println!("{:x?}", self.memory)
 
     }
     pub fn emulate_cycle(&mut self) {
@@ -160,7 +161,7 @@ impl CPU {
 
     fn op_2xxx(&mut self) {
         // Calls subroutine at NNN. 
-        self.stack[self.sp] = self.pc as u16;
+        self.stack[self.sp] = self.pc;
         self.sp += 1;
         self.pc = self.op_nnn() as usize;
     }
@@ -203,36 +204,40 @@ impl CPU {
 
     fn op_7xxx(&mut self) {
         // Adds NN to VX.
-        self.v[self.op_x()] += self.op_nn();
+        println!("{:x?}", self.v);
+        println!("{:x}", self.opcode);
+        println!("{:x}",self.op_nn());
+        let vx = self.v[self.op_x()] as u16;
+        let val = self.op_nn() as u16;
+        let result = vx + val;
+
+        self.v[self.op_x()] = result as u8;
         self.pc += 2; 
     }
 
     fn op_8xxx(&mut self) {
-        match (self.opcode & 0x000F) {
+        match self.opcode & 0x000F {
             0x0000 => { self.v[self.op_x()] = self.v[self.op_y()]; }, // Sets VX to the value of VY. 
             0x0001 => { self.v[self.op_x()] |= self.v[self.op_y()]; }, // Sets VX to VX or VY. 
             0x0002 => { self.v[self.op_x()] &= self.v[self.op_y()]; }, // Sets VX to VX and VY.
             0x0003 => { self.v[self.op_x()] ^= self.v[self.op_y()]; }, // Sets VX to VX xor VY. 
             0x0004 => { //Adds VY to VX. VF is set to 1 when there's a carry, and to 0 when there is not. 
-                self.v[self.op_x()] += self.v[self.op_y()];
+                // I had issues with overflow errors in this section
+                // credit to https://github.com/starrhorne/chip8-rust/blob/master/src/processor.rs
+                // as this helped solve this issue
+                let vx = self.v[self.op_x()]  as u16;
+                let vy = self.v[self.op_y()]  as u16;
+                let result = vx + vy;
 
-                if self.v[self.op_x()] < self.v[self.op_y()]{
-                    self.v[0xF] = 1;
+                self.v[self.op_x()] = result as u8;
+                self.v[0x0F] = if result > 0xFF {1} else {0};
 
-                } else {
-                    self.v[0xF] = 0;
-                }
             },
             0x0005 => {
                 //VY is subtracted from VX. VF is set to 0 when there's a borrow, and 1 when there is not. 
-                self.v[self.op_x()] -= self.v[self.op_y()];
-
-                if self.v[self.op_x()] < self.v[self.op_y()] {
-                    self.v[0xF] = 0
-
-                } else {
-                    self.v[0xF] = 1
-                };
+                self.v[0x0F] = if self.v[self.op_x()] > self.v[self.op_y()] {1} else {0};
+                self.v[self.op_x()] = self.v[self.op_x()].wrapping_sub(self.v[self.op_y()]);
+                
             },
             0x0006 => {
                 //Stores the least significant bit of VX in VF and then shifts VX to the right by 1.
@@ -259,6 +264,7 @@ impl CPU {
             _ => self.opcode_not_found(self.opcode),
         }
         self.pc += 2;
+        println!("section works!");
     }
 
     fn op_9xxx(&mut self) {
@@ -267,11 +273,10 @@ impl CPU {
         } else {
             self.pc += 2;
         }
-        
     }
 
     fn op_Axxx(&mut self) {
-        self.i = self.op_nnn();
+        self.i = self.op_nnn() as usize;
         self.pc += 2;
     }
     fn op_Bxxx(&mut self) {
@@ -290,7 +295,7 @@ impl CPU {
         //let height = self.opcode & 0x000F;
 
         let start_slice = self.i as usize;
-        let end_slice = (start_slice + (self.op_n() as u16) as usize) ;
+        let end_slice = start_slice + (self.op_n() as u16) as usize ;
 
         let sprite = &self.memory[start_slice..end_slice];
 
@@ -300,12 +305,39 @@ impl CPU {
     }
 
     fn op_Exxx(&mut self) {
+        // io not implemented, so assume key not pressed down
+        match self.opcode & 0x00FF {
+            0x009E =>{self.pc += 2},//
+            0x00A1 => {self.pc += 4},
+            _ => self.opcode_not_found(self.opcode),
+        }        
         
     }
     fn op_Fxxx(&mut self) {
-        
+        match self.opcode & 0x00FF {
+            0x0007 => { self.v[self.op_x()] = self.dt },
+            0x000A => self.opcode_not_found(self.opcode),
+            0x001E => { self.i += self.v[self.op_x()] as usize },
+            0x0029 => { self.i = (self.v[self.op_x()] as usize) * 5 },
+            0x0033 => {
+                self.memory[self.i] = self.v[self.op_x()] / 100;
+                self.memory[self.i + 1] = (self.v[self.op_x()] % 100) / 10;
+                self.memory[self.i + 2] = self.v[self.op_x()] % 10;
+            }
+            0x0055 => {
+                for i in 0..=self.op_x() {
+                    self.memory[self.i + i] = self.v[i];
+                }
+            }
+            0x0065 => {
+                for i in 0..=self.op_x() {
+                    self.v[i] = self.memory[self.i + i];
+                }
+            },
+            _ => self.opcode_not_found(self.opcode),
+        }
+        self.pc += 2;
     }
-
 
     fn opcode_not_found(&mut self, opcode: u16) {
         println!("OPCODE {:x} Not implemented", opcode );
@@ -318,7 +350,6 @@ impl CPU {
     // 4 bit register identifier
     fn op_x(&self) -> usize { ((self.opcode & 0x0F00) >> 8) as usize} // remove trailing 8 bits
     fn op_y(&self) -> usize { ((self.opcode & 0x00F0) >> 4) as usize} // remove trailing 4 bits
-
 
 }
 
