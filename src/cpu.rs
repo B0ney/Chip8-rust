@@ -94,6 +94,16 @@ impl CPU {
             self.dt -= 1;
         }
     }
+    pub fn reset_chip8(&mut self) {
+        self.pc = STARTADDR as usize;
+        self.opcode = 0;
+        self.v = [0u8; 16];
+        self.stack = [0; 16];
+        self.i = STARTADDR as usize; 
+        self.sp = 0;
+        self.dt = 0;
+        self.display = video::Display::new();        
+    }
     pub fn emulate_cycle(&mut self) {
         // fetch
         // decode 

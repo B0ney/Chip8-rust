@@ -29,10 +29,12 @@ fn main() {
 
     let mut cpu = CPU::new();
 
-    cpu.load_rom("PONG");
+    cpu.load_rom("TICTAC");
     
     while window.is_open() && !window.is_key_down(Key::Escape) {
-
+        if window.is_key_down(Key::Enter){
+            cpu.reset_chip8();
+        }
         cpu.io.update_keys(pressed_keys(&window));
         cpu.emulate_cycle();
         cpu.dt_dec();
