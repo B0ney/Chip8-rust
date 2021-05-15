@@ -1,9 +1,10 @@
 
 use crate::video;
-//use keypad;
+use crate::keypad::Keypad;
 use std::fs::File;
 use std::io::prelude::*;
 use rand::random;
+
 const STARTADDR: u16 = 0x200; // Memory map from 0x200 to 0xfff used to stor rom and work ram
 
 static CHIP8_FONTSET: [u8;80] = [
@@ -35,17 +36,22 @@ pub struct CPU {
     pub stack:  [usize; 16],
     pub i:      usize,            // index register
     pub sp:     usize,             // stack pointer
-    
+    pub io:     Keypad,
     pub dt:     u8,             // delay timer
+    //pub st:     u8, // sound timer
 
 }
+/*
+Sself.io.key()
 
+*/
 impl CPU {
     pub fn new() -> CPU {
         let mut new_cpu = CPU {
             // initialises memory, registers and video buffers
             memory:     [0u8; 4096],
-            display:    video::Display::new(), 
+            display:    video::Display::new(),
+            io:         Keypad::new(), 
             pc:         STARTADDR as usize,
             opcode:     0,
             v:          [0u8; 16],
@@ -62,14 +68,14 @@ impl CPU {
         return new_cpu;
     }
     pub fn load_rom(&mut self, path: &str) {
-        let mut f = File::open(path).expect("file does not exist");        
+        let mut f = File::open(path).expect("Err())");        
         let mut buffer = [0u8;3584];
-
-        let bytes_read = if let Ok(bytes_read) = f.read(&mut buffer) {
-            bytes_read
-        } else {
-            0
-        };
+        f.read(&mut buffer);
+        // let bytes_read = if let Ok(bytes_read) = f.read(&mut buffer) {
+        //     bytes_read
+        // } else {
+        //     0
+        // };
 
         for (i, &byte) in buffer.iter().enumerate() {
             let addr = 0x200 + i;
@@ -79,8 +85,14 @@ impl CPU {
                 break;
             }
         }
-        println!("{:x?}", self.memory)
+        //println!("{:x?}", self.memory)
 
+    }
+    pub fn dt_dec(&mut self) {
+        // need to run at 60Hz
+        if self.dt != 0 {
+            self.dt -= 1;
+        }
     }
     pub fn emulate_cycle(&mut self) {
         // fetch
@@ -88,8 +100,8 @@ impl CPU {
         // execute
         self.fetch_opcode();
         self.execute();
-        println!("Opcode: {:x}", self.opcode);
-        println!("Program counter: {:x}", self.pc);
+        //println!("Opcode: {:x}", self.opcode);
+        //println!("Program counter: {:x}", self.pc);
 
 
         //update timer
@@ -120,7 +132,7 @@ impl CPU {
             https://en.wikipedia.org/wiki/CHIP-8#Opcode_table
 
         */
-        match (self.opcode & 0xf000) {
+        match self.opcode & 0xf000 {
             0x0000  => self.op_0xxx(),
             0x1000 => self.op_1xxx(),
             0x2000 => self.op_2xxx(),
@@ -204,9 +216,9 @@ impl CPU {
 
     fn op_7xxx(&mut self) {
         // Adds NN to VX.
-        println!("{:x?}", self.v);
-        println!("{:x}", self.opcode);
-        println!("{:x}",self.op_nn());
+        //println!("{:x?}", self.v);
+        //println!("{:x}", self.opcode);
+        //println!("{:x}",self.op_nn());
         let vx = self.v[self.op_x()] as u16;
         let val = self.op_nn() as u16;
         let result = vx + val;
@@ -236,7 +248,7 @@ impl CPU {
             0x0005 => {
                 //VY is subtracted from VX. VF is set to 0 when there's a borrow, and 1 when there is not. 
                 self.v[0x0F] = if self.v[self.op_x()] > self.v[self.op_y()] {1} else {0};
-                self.v[self.op_x()] = self.v[self.op_x()].wrapping_sub(self.v[self.op_y()]);
+                self.v[ self.op_x() ] = self.v[ self.op_x() ].wrapping_sub(self.v[ self.op_y() ]);
                 
             },
             0x0006 => {
@@ -245,8 +257,9 @@ impl CPU {
                 self.v[self.op_x()] >>= 1;
             },
             0x0007 => {
-                //Sets VX to VY minus VX. VF is set to 0 when there's a borrow, and 1 when there is not. 
-                self.v[self.op_x()] = self.v[self.op_y()] - self.v[self.op_x()];
+                //Sets VX to VY minus VX. VF is set to 0 when there's a borrow, and 1 when there is not.
+
+                self.v[self.op_x()] = self.v[ self.op_y() ].wrapping_sub(self.v[ self.op_x() ]);
 
                 if self.v[self.op_x()] > self.v[self.op_y()] {
                     self.v[0xF] = 0
@@ -264,7 +277,7 @@ impl CPU {
             _ => self.opcode_not_found(self.opcode),
         }
         self.pc += 2;
-        println!("section works!");
+        //println!("section works!");
     }
 
     fn op_9xxx(&mut self) {
@@ -301,14 +314,27 @@ impl CPU {
 
         self.v[0xF] = self.display.draw(x, y, sprite); // draw function returns collision data
         self.pc += 2;
+        //println!("{:x?}", self.display.display_buffer);
 
     }
 
     fn op_Exxx(&mut self) {
         // io not implemented, so assume key not pressed down
         match self.opcode & 0x00FF {
-            0x009E =>{self.pc += 2},//
-            0x00A1 => {self.pc += 4},
+            0x009E =>{
+                if self.io.keys_pressed[self.v[self.op_x()] as usize] == true {
+                    self.pc += 4;
+                } else {
+                   self.pc += 2; 
+                }
+            },//
+            0x00A1 => {
+                if self.io.keys_pressed[self.v[self.op_x()] as usize] == false {
+                    self.pc += 4;
+                } else {
+                   self.pc += 2; 
+                }
+            },
             _ => self.opcode_not_found(self.opcode),
         }        
         
@@ -316,26 +342,35 @@ impl CPU {
     fn op_Fxxx(&mut self) {
         match self.opcode & 0x00FF {
             0x0007 => { self.v[self.op_x()] = self.dt },
-            0x000A => self.opcode_not_found(self.opcode),
+            0x000A => {
+                //self.opcode_not_found(self.opcode)
+                match self.io.get_key() {
+                    Some(u8) => self.v[self.op_x()] = self.io.get_key().unwrap(),
+                    None => self.pc -= 2,
+                }
+            },
+            
+            0x0015 => { self.dt = self.v[self.op_x()]},
+            0x0018 => { },//println!{"BEEP!"} }
             0x001E => { self.i += self.v[self.op_x()] as usize },
             0x0029 => { self.i = (self.v[self.op_x()] as usize) * 5 },
             0x0033 => {
                 self.memory[self.i] = self.v[self.op_x()] / 100;
                 self.memory[self.i + 1] = (self.v[self.op_x()] % 100) / 10;
                 self.memory[self.i + 2] = self.v[self.op_x()] % 10;
-            }
+            },
             0x0055 => {
                 for i in 0..=self.op_x() {
                     self.memory[self.i + i] = self.v[i];
                 }
-            }
+            },
             0x0065 => {
                 for i in 0..=self.op_x() {
                     self.v[i] = self.memory[self.i + i];
                 }
             },
             _ => self.opcode_not_found(self.opcode),
-        }
+        };
         self.pc += 2;
     }
 
@@ -343,7 +378,7 @@ impl CPU {
         println!("OPCODE {:x} Not implemented", opcode );
     }
 
-    fn op_nnn(&self)    -> u16 { (self.opcode & 0x0FFF) } // 16 bit address
+    fn op_nnn(&self)    -> u16 { self.opcode & 0x0FFF } // 16 bit address
     fn op_nn(&self)     -> u8 { (self.opcode & 0x00FF) as u8 } // 8 bit constant
     fn op_n(&self)      -> u8 { (self.opcode & 0x000F) as u8 } // "4" bit constant
 
@@ -351,10 +386,4 @@ impl CPU {
     fn op_x(&self) -> usize { ((self.opcode & 0x0F00) >> 8) as usize} // remove trailing 8 bits
     fn op_y(&self) -> usize { ((self.opcode & 0x00F0) >> 4) as usize} // remove trailing 4 bits
 
-}
-
-#[test]
-fn test1(){
-    let cpu = CPU::new();
-    cpu.fetch_opcode()
 }

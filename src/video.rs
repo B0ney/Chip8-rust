@@ -29,18 +29,19 @@ impl Display {
         let mut pixel: u8;
         let mut collision: u8 = 0;
 
-        for yline in 0..height{
+        for yline in 0..height {
             pixel = sprite[yline];
 
             for xline in 0..8 {
-                let j = (y + yline);
-                let i = (x + xline);
+                let j = (y + yline) % HEIGHT;
+                let i = (x + xline) % WIDTH;
 
                 if (pixel & (0x80 >> xline)) != 0 {
                     if self.display_buffer[ i + j ] == 1 {
                         collision = 1;
                     }
-                    self.display_buffer[i + (j * 64)] ^= 1;
+                    //if i + (j * 64)
+                    self.display_buffer[i + ((j * 64))] ^= 1;
                 }
             }
         }
@@ -51,7 +52,7 @@ impl Display {
     //     let size = (WIDTH * HEIGHT) * scale;
     //     let mut buffer = [u32: size];
 
-
+        
     // }
 }
 

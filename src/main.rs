@@ -3,17 +3,19 @@ extern crate minifb;
 use cpu::CPU;
 mod cpu;
 mod video;
-//mod keypad;
+mod keypad;
 use minifb::{Key, Window, WindowOptions};
+//use rand::random;
 
-const WIDTH: usize = 640;
-const HEIGHT: usize = 320;
+const SCALE: usize = 10;
+const WIDTH: usize = 64;
+const HEIGHT: usize = 32;
 
 fn main() {
-    let mut buffer = [0u32; WIDTH * HEIGHT];
+    let mut buffer = [0u32; (WIDTH * HEIGHT) * SCALE];
 
     let mut window = Window::new(
-        "CHIP-8 emulator - ESC to exit",
+        "CHIP-8 emulator - ESC to exit - ENTER to restart",
         WIDTH,
         HEIGHT,
         WindowOptions::default(),
@@ -23,63 +25,50 @@ fn main() {
     });
 
     // Limit to max ~60 fps update rate
-    window.limit_update_rate(Some(std::time::Duration::from_micros(16600)));
+    //window.limit_update_rate(Some(std::time::Duration::from_micros(16600)));
 
     let mut cpu = CPU::new();
-    cpu.load_rom("tetris.ch8");
 
+    cpu.load_rom("PONG");
+    
     while window.is_open() && !window.is_key_down(Key::Escape) {
-        //execute cpu cycles
+
+        cpu.io.update_keys(pressed_keys(&window));
         cpu.emulate_cycle();
-        // have a way to scale cpu frame buffer to window frame buffer
+        cpu.dt_dec();
 
+        // updates video buffer
+        for i in 0..buffer.len() {
+            buffer[i] = if cpu.display.display_buffer[i % 2048] == 1 {0xffffff} else {0x000000}
+        };
 
-        // update window by reading frame buffer
-        // for i in buffer.iter_mut() {
-        //     if window.is_key_down(Key::Up) {
-        //         *i = 0xffffff;
-        //     } else {
-        //         *i = 0x000000;
-        //     }
+        window
+            .update_with_buffer(&buffer, WIDTH, HEIGHT)
+            .unwrap();
 
+    };
 
+    
             // println!("{:?}",pressed_keys(&window));
              // write something more funny here!
         
         //println!("{:?}",pressed_keys(&window));
         // We unwrap here as we want this code to exit if it fails. Real applications may want to handle this in a different way
-        window
-            .update_with_buffer(&buffer, WIDTH, HEIGHT)
-            .unwrap();
-    }
+
 }
-// fn get_colour(window: Window) -> &'static str {
-//     window.get_keys().map(|keys| {
-//         for t in keys {
-//             match t {
-//                 Key::W => "holding w",
-//                 Key::T => "holding t",
-//                 _ => (),
-//             }
-//         }
-//     });
-// }
-
-// fn test(window: Window) ->&'static str{
-//     match window.get_keys().unwrap() {
-//         Key::Up => "holding up",
-//         Key::Down => "holding down",
-//         _ => "None"
-//     }
-
-// }
 
 
 fn pressed_keys(window: &Window) -> [bool;16] {
     let mut keys_pressed = [false;16];
-    //let window = Window::new();
+
     window.get_keys().map(|keys| {
         for key in keys {
+            /*
+            1 2 3 4
+            Q W E R
+            A S D F
+            Z X C V     
+            */
             match key {
                 Key::Key1 => {keys_pressed[0x1] = true},
                 Key::Key2 => {keys_pressed[0x2] = true},
