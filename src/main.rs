@@ -26,10 +26,11 @@ fn main() {
 
     // Limit to max ~60 fps update rate
     //window.limit_update_rate(Some(std::time::Duration::from_micros(16600)));
+    // This section of code is temporarilly disabled to speed up emulation
 
     let mut cpu = CPU::new();
 
-    cpu.load_rom("AIRPLANE.ch8");
+    cpu.load_rom("TICTAC");
     
     while window.is_open() && !window.is_key_down(Key::Escape) {
         if window.is_key_down(Key::Enter){
@@ -47,16 +48,7 @@ fn main() {
         window
             .update_with_buffer(&buffer, WIDTH, HEIGHT)
             .unwrap();
-
     };
-
-    
-            // println!("{:?}",pressed_keys(&window));
-             // write something more funny here!
-        
-        //println!("{:?}",pressed_keys(&window));
-        // We unwrap here as we want this code to exit if it fails. Real applications may want to handle this in a different way
-
 }
 
 
