@@ -3,9 +3,7 @@ Chip 8 emulator written in rust.
 
 A work in progress project to better understand the rust programming language.
 
-# Controls
-
-Chip8 Keyboad:
+#Chip8 controls:
 | | | | |
 |-|-|-|-|
 |1|2|3|4|
