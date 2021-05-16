@@ -29,7 +29,7 @@ fn main() {
 
     let mut cpu = CPU::new();
 
-    cpu.load_rom("TICTAC");
+    cpu.load_rom("AIRPLANE.ch8");
     
     while window.is_open() && !window.is_key_down(Key::Escape) {
         if window.is_key_down(Key::Enter){

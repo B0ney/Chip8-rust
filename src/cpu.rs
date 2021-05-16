@@ -229,11 +229,11 @@ impl CPU {
         //println!("{:x?}", self.v);
         //println!("{:x}", self.opcode);
         //println!("{:x}",self.op_nn());
-        let vx = self.v[self.op_x()] as u16;
-        let val = self.op_nn() as u16;
-        let result = vx + val;
+        // let vx = self.v[self.op_x()] as u16;
+        // let val = self.op_nn() as u16;
+        // let result = vx + val;
 
-        self.v[self.op_x()] = result as u8;
+        self.v[self.op_x()] = self.v[self.op_x()].wrapping_add(self.op_nn());//result as u8;
         self.pc += 2; 
     }
 
@@ -265,6 +265,7 @@ impl CPU {
                 //Stores the least significant bit of VX in VF and then shifts VX to the right by 1.
                 self.v[0xF] = self.v[self.op_x()] & 0x1 ;
                 self.v[self.op_x()] >>= 1;
+                //println!("called!");
             },
             0x0007 => {
                 //Sets VX to VY minus VX. VF is set to 0 when there's a borrow, and 1 when there is not.
@@ -367,7 +368,7 @@ impl CPU {
             0x0033 => {
                 self.memory[self.i] = self.v[self.op_x()] / 100;
                 self.memory[self.i + 1] = (self.v[self.op_x()] % 100) / 10;
-                self.memory[self.i + 2] = self.v[self.op_x()] % 10;
+                self.memory[self.i + 2] = (self.v[self.op_x()] % 100) % 10;
             },
             0x0055 => {
                 for i in 0..=self.op_x() {
