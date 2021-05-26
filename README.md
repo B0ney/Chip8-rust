@@ -17,4 +17,4 @@ A work in progress project to better understand the rust programming language.
 |A|S|D|F|
 |Z|X|C|V|
 
-Enter resets the emulator
+Enter Key resets the emulator
