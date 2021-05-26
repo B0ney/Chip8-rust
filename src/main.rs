@@ -24,6 +24,7 @@ fn main() {
     });
 
     // Limit to max ~60 fps update rate
+    // had to comment out due to emulator underperforming
     //window.limit_update_rate(Some(std::time::Duration::from_micros(16600)));
 
     let mut cpu = CPU::new();
@@ -48,16 +49,7 @@ fn main() {
             .unwrap();
 
     };
-
-    
-            // println!("{:?}",pressed_keys(&window));
-             // write something more funny here!
-        
-        //println!("{:?}",pressed_keys(&window));
-        // We unwrap here as we want this code to exit if it fails. Real applications may want to handle this in a different way
-
 }
-
 
 fn pressed_keys(window: &Window) -> [bool;16] {
     let mut keys_pressed = [false;16];
@@ -92,6 +84,5 @@ fn pressed_keys(window: &Window) -> [bool;16] {
             }
         });
     keys_pressed
-    
 }
 
