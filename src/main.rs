@@ -5,19 +5,18 @@ mod cpu;
 mod video;
 mod keypad;
 use minifb::{Key, Window, WindowOptions};
-//use rand::random;
+
 
 const SCALE: usize = 10;
 const WIDTH: usize = 64;
 const HEIGHT: usize = 32;
 
 fn main() {
-    let mut buffer = [0u32; (WIDTH * HEIGHT) * SCALE];
-
+    let mut buffer = [0u32; (WIDTH * HEIGHT)];
     let mut window = Window::new(
         "CHIP-8 emulator - ESC to exit - ENTER to restart",
-        WIDTH,
-        HEIGHT,
+        WIDTH * SCALE, 
+        HEIGHT * SCALE,
         WindowOptions::default(),
     )
     .unwrap_or_else(|e| {
@@ -26,11 +25,10 @@ fn main() {
 
     // Limit to max ~60 fps update rate
     //window.limit_update_rate(Some(std::time::Duration::from_micros(16600)));
-    // This section of code is temporarilly disabled to speed up emulation
 
     let mut cpu = CPU::new();
 
-    cpu.load_rom("TICTAC");
+    cpu.load_rom("PONG"); // hard coded for now
     
     while window.is_open() && !window.is_key_down(Key::Escape) {
         if window.is_key_down(Key::Enter){
@@ -48,7 +46,16 @@ fn main() {
         window
             .update_with_buffer(&buffer, WIDTH, HEIGHT)
             .unwrap();
+
     };
+
+    
+            // println!("{:?}",pressed_keys(&window));
+             // write something more funny here!
+        
+        //println!("{:?}",pressed_keys(&window));
+        // We unwrap here as we want this code to exit if it fails. Real applications may want to handle this in a different way
+
 }
 
 

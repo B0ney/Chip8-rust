@@ -4,7 +4,9 @@ const HEIGHT: usize = 32;
 
 
 pub struct Display {
+    // may cause issues later with oure renderer, because it is a u8
     pub display_buffer: [u8; WIDTH * HEIGHT],
+    // pub draw_flag: bool,
 }
 
 impl Display {
@@ -12,6 +14,7 @@ impl Display {
     pub fn new() -> Display {
         Display {
             display_buffer: [0; WIDTH * HEIGHT],
+            // draw_flag: false,
         }
     }
 
@@ -37,12 +40,19 @@ impl Display {
                     if self.display_buffer[ i + j ] == 1 {
                         collision = 1;
                     }
+                    //if i + (j * 64)
                     self.display_buffer[i + (j * WIDTH)] ^= 1;
                 }
             }
         }
+        // self.draw_flag = true;
         collision
     }
+    // pub fn draw_to_buffer(scale:usize) {
+    //     let size = (WIDTH * HEIGHT) * scale;
+    //     let mut buffer = [u32: size];
 
+        
+    // }
 }
 

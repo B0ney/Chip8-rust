@@ -41,7 +41,10 @@ pub struct CPU {
     //pub st:     u8, // sound timer
 
 }
+/*
+Sself.io.key()
 
+*/
 impl CPU {
     pub fn new() -> CPU {
         let mut new_cpu = CPU {
@@ -66,8 +69,13 @@ impl CPU {
     }
     pub fn load_rom(&mut self, path: &str) {
         let mut f = File::open(path).expect("Err())");        
-        let mut buffer = [0u8;3584]; // will use to Vec next time
+        let mut buffer = [0u8;3584];
         f.read(&mut buffer);
+        // let bytes_read = if let Ok(bytes_read) = f.read(&mut buffer) {
+        //     bytes_read
+        // } else {
+        //     0
+        // };
 
         for (i, &byte) in buffer.iter().enumerate() {
             let addr = 0x200 + i;
@@ -77,15 +85,15 @@ impl CPU {
                 break;
             }
         }
+        //println!("{:x?}", self.memory)
+
     }
-    
     pub fn dt_dec(&mut self) {
-        // needs to run at 60Hz
+        // need to run at 60Hz
         if self.dt != 0 {
             self.dt -= 1;
         }
     }
-    
     pub fn reset_chip8(&mut self) {
         self.pc = STARTADDR as usize;
         self.opcode = 0;
@@ -97,8 +105,16 @@ impl CPU {
         self.display = video::Display::new();        
     }
     pub fn emulate_cycle(&mut self) {
+        // fetch
+        // decode 
+        // execute
         self.fetch_opcode();
         self.execute();
+        //println!("Opcode: {:x}", self.opcode);
+        //println!("Program counter: {:x}", self.pc);
+
+
+        //update timer
     }
 
     pub fn fetch_opcode(&mut self) {
@@ -111,7 +127,7 @@ impl CPU {
             memory[0x200] << 8 | memory[0x201] = 1101011000000000  <- Logical OR bit instructions to get 16 bits 
                                                          10100101
                                                          
-            result opcode = 1101011010100101 
+                                                 1101011010100101 
 
         */
         self.opcode = (self.memory[self.pc] as u16) << 8 | (self.memory[self.pc + 1] as u16);
@@ -209,6 +225,14 @@ impl CPU {
     }
 
     fn op_7xxx(&mut self) {
+        // Adds NN to VX.
+        //println!("{:x?}", self.v);
+        //println!("{:x}", self.opcode);
+        //println!("{:x}",self.op_nn());
+        // let vx = self.v[self.op_x()] as u16;
+        // let val = self.op_nn() as u16;
+        // let result = vx + val;
+
         self.v[self.op_x()] = self.v[self.op_x()].wrapping_add(self.op_nn());//result as u8;
         self.pc += 2; 
     }
@@ -241,6 +265,7 @@ impl CPU {
                 //Stores the least significant bit of VX in VF and then shifts VX to the right by 1.
                 self.v[0xF] = self.v[self.op_x()] & 0x1 ;
                 self.v[self.op_x()] >>= 1;
+                //println!("called!");
             },
             0x0007 => {
                 //Sets VX to VY minus VX. VF is set to 0 when there's a borrow, and 1 when there is not.
@@ -255,7 +280,7 @@ impl CPU {
                 };
             },
             0x000E => {
-                // Stores the most significant bit of VX in VF and then shifts VX to the left by 1.
+                //Stores the most significant bit of VX in VF and then shifts VX to the left by 1.
                 // please check
                 self.v[0xF] = self.v[self.op_x()] >> 7; // shift 8 bits to right 7 places to get msb
                 self.v[self.op_x()] <<= 1;
@@ -263,7 +288,7 @@ impl CPU {
             _ => self.opcode_not_found(self.opcode),
         }
         self.pc += 2;
-
+        //println!("section works!");
     }
 
     fn op_9xxx(&mut self) {
@@ -288,9 +313,10 @@ impl CPU {
         self.pc += 2;
     }
     fn op_Dxxx(&mut self) {
-        // draws sprite to frame buffer
+        // TODO
         let x = self.v[self.op_x()] as usize;
         let y = self.v[self.op_y()] as usize;
+        //let height = self.opcode & 0x000F;
 
         let start_slice = self.i as usize;
         let end_slice = start_slice + (self.op_n() as u16) as usize ;
@@ -299,20 +325,21 @@ impl CPU {
 
         self.v[0xF] = self.display.draw(x, y, sprite); // draw function returns collision data
         self.pc += 2;
+        //println!("{:x?}", self.display.display_buffer);
+
     }
 
     fn op_Exxx(&mut self) {
+        // io not implemented, so assume key not pressed down
         match self.opcode & 0x00FF {
             0x009E =>{
-                // skips instruction if key specified by vregister[x] is pressed
                 if self.io.keys_pressed[self.v[self.op_x()] as usize] == true {
                     self.pc += 4;
                 } else {
                    self.pc += 2; 
                 }
-            },
+            },//
             0x00A1 => {
-                // skips instruction if key specified by vregister[x] is not pressed
                 if self.io.keys_pressed[self.v[self.op_x()] as usize] == false {
                     self.pc += 4;
                 } else {
@@ -327,15 +354,15 @@ impl CPU {
         match self.opcode & 0x00FF {
             0x0007 => { self.v[self.op_x()] = self.dt },
             0x000A => {
+                //self.opcode_not_found(self.opcode)
                 match self.io.get_key() {
-                    // halts until key specified in Vregister[x] is pressed
                     Some(u8) => self.v[self.op_x()] = self.io.get_key().unwrap(),
                     None => self.pc -= 2,
                 }
             },
             
             0x0015 => { self.dt = self.v[self.op_x()]},
-            0x0018 => { /* BEEP*/ },
+            0x0018 => { },//println!{"BEEP!"} }
             0x001E => { self.i += self.v[self.op_x()] as usize },
             0x0029 => { self.i = (self.v[self.op_x()] as usize) * 5 },
             0x0033 => {
