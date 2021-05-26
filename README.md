@@ -2,6 +2,7 @@
 Chip 8 emulator written in rust.
 
 A work in progress project to better understand the rust programming language.
+This project uses minifb for the display and key presses.
 # Resources:
 * https://en.wikipedia.org/wiki/CHIP-8
 * https://multigesture.net/articles/how-to-write-an-emulator-chip-8-interpreter/
