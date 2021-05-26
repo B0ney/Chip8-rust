@@ -110,11 +110,7 @@ impl CPU {
         // execute
         self.fetch_opcode();
         self.execute();
-        //println!("Opcode: {:x}", self.opcode);
-        //println!("Program counter: {:x}", self.pc);
 
-
-        //update timer
     }
 
     pub fn fetch_opcode(&mut self) {
@@ -226,13 +222,6 @@ impl CPU {
 
     fn op_7xxx(&mut self) {
         // Adds NN to VX.
-        //println!("{:x?}", self.v);
-        //println!("{:x}", self.opcode);
-        //println!("{:x}",self.op_nn());
-        // let vx = self.v[self.op_x()] as u16;
-        // let val = self.op_nn() as u16;
-        // let result = vx + val;
-
         self.v[self.op_x()] = self.v[self.op_x()].wrapping_add(self.op_nn());//result as u8;
         self.pc += 2; 
     }
@@ -281,14 +270,12 @@ impl CPU {
             },
             0x000E => {
                 //Stores the most significant bit of VX in VF and then shifts VX to the left by 1.
-                // please check
                 self.v[0xF] = self.v[self.op_x()] >> 7; // shift 8 bits to right 7 places to get msb
                 self.v[self.op_x()] <<= 1;
             },
             _ => self.opcode_not_found(self.opcode),
         }
         self.pc += 2;
-        //println!("section works!");
     }
 
     fn op_9xxx(&mut self) {
@@ -330,7 +317,6 @@ impl CPU {
     }
 
     fn op_Exxx(&mut self) {
-        // io not implemented, so assume key not pressed down
         match self.opcode & 0x00FF {
             0x009E =>{
                 if self.io.keys_pressed[self.v[self.op_x()] as usize] == true {
@@ -338,7 +324,7 @@ impl CPU {
                 } else {
                    self.pc += 2; 
                 }
-            },//
+            },
             0x00A1 => {
                 if self.io.keys_pressed[self.v[self.op_x()] as usize] == false {
                     self.pc += 4;
@@ -354,7 +340,6 @@ impl CPU {
         match self.opcode & 0x00FF {
             0x0007 => { self.v[self.op_x()] = self.dt },
             0x000A => {
-                //self.opcode_not_found(self.opcode)
                 match self.io.get_key() {
                     Some(u8) => self.v[self.op_x()] = self.io.get_key().unwrap(),
                     None => self.pc -= 2,
